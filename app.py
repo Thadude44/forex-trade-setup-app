@@ -1,78 +1,142 @@
-# Streamlit App: Cleaned & Fixed Forex Trade Setup Generator
+# forex_trade_setup_app/app.py
+
 import streamlit as st
 import requests
-import pandas as pd
+import datetime
 
-st.set_page_config(page_title="Forex Trade Setup Generator", layout="centered")
-st.title("\U0001F4C8 Forex Trade Setup via Polygon")
+# --------------------- Configuration ---------------------
+BASE_URL = "https://api.polygon.io/v2/aggs/ticker"
+API_KEY = st.secrets["POLYGON_API_KEY"] if "POLYGON_API_KEY" in st.secrets else ""
 
-st.markdown("""
-Paste your [Polygon.io](https://polygon.io) API Key and the Forex symbol (e.g., `C:EURUSD`) to fetch market data across multiple timeframes.
----
-""")
-
-api_key = st.text_input("\U0001F511 Polygon API Key", type="password")
-symbol = st.text_input("\U0001F4B1 Forex Symbol (format: C:EURUSD)", value="C:EURUSD")
-submit = st.button("\U0001F4CA Get Trade Setup Data")
-
-@st.cache_data(ttl=60)
-def fetch_candles(symbol, timespan, limit):
-    url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/{timespan}/now?adjusted=true&sort=desc&limit={limit}&apiKey={api_key}"
-    res = requests.get(url)
-    try:
-        res.raise_for_status()
-        return res.json().get("results", [])
-    except Exception as e:
-        st.error(f"Error fetching {timespan} data: {e}")
+# --------------------- Helpers ---------------------------
+def get_candles(symbol: str, timeframe: str, limit: int):
+    now = datetime.datetime.utcnow()
+    if timeframe == "day":
+        from_date = (now - datetime.timedelta(days=limit+3)).strftime('%Y-%m-%d')
+        to_date = now.strftime('%Y-%m-%d')
+    elif timeframe == "minute":
+        from_date = now.strftime('%Y-%m-%d')
+        to_date = now.strftime('%Y-%m-%d')
+    else:
         return []
 
-def format_candles(raw):
-    return [
-        {
-            "timestamp": pd.to_datetime(candle["t"], unit="ms").strftime("%Y-%m-%d %H:%M"),
-            "open": candle["o"],
-            "high": candle["h"],
-            "low": candle["l"],
-            "close": candle["c"]
-        } for candle in raw
-    ]
+    url = f"{BASE_URL}/{symbol}/range/1/{timeframe}/{from_date}/{to_date}?adjusted=true&sort=desc&limit={limit}&apiKey={API_KEY}"
+    r = requests.get(url)
+    r.raise_for_status()
+    return r.json().get("results", [])
 
-if submit and api_key and symbol:
-    with st.spinner("Fetching data from Polygon..."):
-        # Daily candles (last 5 days)
-        daily_raw = fetch_candles(symbol, "day", 5)
-        daily = format_candles(daily_raw)
+# --------------------- UI -------------------------------
+st.title("📈 Forex Trade Setup via Polygon")
+st.markdown("Paste your [Polygon.io](https://polygon.io) API Key and the Forex symbol (e.g., `C:EURUSD`) to fetch market data across multiple timeframes.")
 
-        # Minute candles (last 300 min, used for 15-min and 1-min)
-        minute_raw = fetch_candles(symbol, "minute", 300)
-        m1 = format_candles(minute_raw[-30:])
-        m15 = [minute_raw[i:i+15] for i in range(0, min(len(minute_raw), 300), 15)]
-        m15 = format_candles([x[-1] for x in m15][-20:])  # Take last candle in each 15-min chunk
+API_KEY = st.text_input("🔑 Polygon API Key", API_KEY, type="password")
+symbol = st.text_input("🐺 Forex Symbol (format: C:EURUSD)", value="C:EURUSD")
 
-    st.subheader("\U0001F7E2 Last 5 Daily Candles")
-    st.code(daily, language="json")
+if st.button("📊 Get Trade Setup Data"):
+    try:
+        daily = get_candles(symbol, "day", 5)
+        m15 = get_candles(symbol, "minute", 20*15)  # 20 candles on 15-min frame = 5 hours
+        m1 = get_candles(symbol, "minute", 30)      # 30 candles on 1-min frame = 30 min
 
-    st.subheader("\U0001F7E1 Last 20 15-Minute Candles")
-    st.code(m15, language="json")
+        st.success("✅ Data fetched successfully!")
 
-    st.subheader("\U0001F534 Last 30 1-Minute Candles")
-    st.code(m1, language="json")
+        st.markdown("### 🟢 Last 5 Daily Candles")
+        st.write(daily)
 
-    st.subheader("\U0001F4AC Prompt to Use in ChatGPT")
-    prompt = f"""Based on the following market data:
+        st.markdown("### 🟡 Last 20 15-Minute Candles")
+        m15_trimmed = m15[:20] if len(m15) >= 20 else m15
+        st.write(m15_trimmed)
+
+        st.markdown("### 🔴 Last 30 1-Minute Candles")
+        st.write(m1)
+
+        st.markdown("### 💬 Prompt to Use in ChatGPT")
+        st.code(f"""
+Based on the following market data:
 
 ### Daily Candles:
 {daily}
 
 ### 15-Minute Candles:
-{m15}
+{m15_trimmed}
 
 ### 1-Minute Candles:
 {m1}
 
-What is the highest-probability Forex trade setup based on trend, confluence, and momentum?\nProvide direction, entry, stop loss, target, and reasoning."""
+What is the highest-probability Forex trade setup based on trend, confluence, and momentum?
+Provide direction, entry, stop loss, target, and reasoning.
+""", language="markdown")
 
-    st.text_area("Prompt to Copy", prompt, height=400)
+    except Exception as e:
+        st.error(f"Error: {e}")
+# forex_trade_setup_app/app.py
 
-elif submit:
-    st.warning("Please enter both API Key and symbol.")
+import streamlit as st
+import requests
+import datetime
+
+# --------------------- Configuration ---------------------
+BASE_URL = "https://api.polygon.io/v2/aggs/ticker"
+API_KEY = st.secrets["POLYGON_API_KEY"] if "POLYGON_API_KEY" in st.secrets else ""
+
+# --------------------- Helpers ---------------------------
+def get_candles(symbol: str, timeframe: str, limit: int):
+    now = datetime.datetime.utcnow()
+    if timeframe == "day":
+        from_date = (now - datetime.timedelta(days=limit+3)).strftime('%Y-%m-%d')
+        to_date = now.strftime('%Y-%m-%d')
+    elif timeframe == "minute":
+        from_date = now.strftime('%Y-%m-%d')
+        to_date = now.strftime('%Y-%m-%d')
+    else:
+        return []
+
+    url = f"{BASE_URL}/{symbol}/range/1/{timeframe}/{from_date}/{to_date}?adjusted=true&sort=desc&limit={limit}&apiKey={API_KEY}"
+    r = requests.get(url)
+    r.raise_for_status()
+    return r.json().get("results", [])
+
+# --------------------- UI -------------------------------
+st.title("📈 Forex Trade Setup via Polygon")
+st.markdown("Paste your [Polygon.io](https://polygon.io) API Key and the Forex symbol (e.g., `C:EURUSD`) to fetch market data across multiple timeframes.")
+
+API_KEY = st.text_input("🔑 Polygon API Key", API_KEY, type="password")
+symbol = st.text_input("🐺 Forex Symbol (format: C:EURUSD)", value="C:EURUSD")
+
+if st.button("📊 Get Trade Setup Data"):
+    try:
+        daily = get_candles(symbol, "day", 5)
+        m15 = get_candles(symbol, "minute", 20*15)  # 20 candles on 15-min frame = 5 hours
+        m1 = get_candles(symbol, "minute", 30)      # 30 candles on 1-min frame = 30 min
+
+        st.success("✅ Data fetched successfully!")
+
+        st.markdown("### 🟢 Last 5 Daily Candles")
+        st.write(daily)
+
+        st.markdown("### 🟡 Last 20 15-Minute Candles")
+        m15_trimmed = m15[:20] if len(m15) >= 20 else m15
+        st.write(m15_trimmed)
+
+        st.markdown("### 🔴 Last 30 1-Minute Candles")
+        st.write(m1)
+
+        st.markdown("### 💬 Prompt to Use in ChatGPT")
+        st.code(f"""
+Based on the following market data:
+
+### Daily Candles:
+{daily}
+
+### 15-Minute Candles:
+{m15_trimmed}
+
+### 1-Minute Candles:
+{m1}
+
+What is the highest-probability Forex trade setup based on trend, confluence, and momentum?
+Provide direction, entry, stop loss, target, and reasoning.
+""", language="markdown")
+
+    except Exception as e:
+        st.error(f"Error: {e}")
