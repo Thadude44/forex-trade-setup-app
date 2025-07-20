@@ -26,14 +26,3 @@ Then go back to Streamlit and:
 * Branch: `main`
 * Main file path: `app.py`
 
----
-
-### 💡 Shortcut:
-
-If you’d like, I can:
-
-* Package this into a complete `app.py` file
-* Give you a GitHub-ready zip to upload
-* Or walk you through copy-pasting it into your GitHub account
-
-Want me to prep the ready-to-go `app.py` for you now?
