@@ -14,15 +14,3 @@ def get_candles(symbol, interval, limit):
 # Example:
 daily = get_candles(symbol, "day", 5)
 print(daily)
-```
-
-#### **Step 2: Add this to your GitHub repo**
-
-Upload this code as `app.py` in your GitHub repo (e.g. `yourusername/forex-trade-setup-app`).
-
-Then go back to Streamlit and:
-
-* Set the repo to `yourusername/forex-trade-setup-app`
-* Branch: `main`
-* Main file path: `app.py`
-
