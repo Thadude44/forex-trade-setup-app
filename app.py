@@ -1,72 +1,58 @@
-# Streamlit App: Forex Trade Setup Generator (Polygon API)
-import streamlit as st
-import requests
-import pandas as pd
-
-st.set_page_config(page_title="Forex Trade Setup Generator", layout="centered")
-st.title("📈 Forex Trade Setup via Polygon")
-
-st.markdown("""
-Paste your [Polygon.io](https://polygon.io) API Key and the Forex symbol (e.g., `C:EURUSD`) to fetch market data across multiple timeframes.
+Thanks for the update — you're **almost there**, but here's why you're not seeing any candle data yet:
 
 ---
-""")
 
-api_key = st.text_input("🔑 Polygon API Key", type="password")
-symbol = st.text_input("💱 Forex Symbol (format: C:EURUSD)", value="C:EURUSD")
+### 🔧 Reason You See No Data:
 
-submit = st.button("📊 Get Trade Setup Data")
+Your Streamlit app is showing the prompt template correctly, but **you haven’t connected your Polygon API** to fetch actual candlestick data.
 
-@st.cache_data(ttl=60)
-def fetch_candles(symbol, timespan, limit):
-    url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/{timespan}/now?adjusted=true&sort=desc&limit={limit}&apiKey={api_key}"
-    res = requests.get(url)
-    if res.status_code == 200:
-        return res.json().get("results", [])
-    else:
-        return []
+---
 
-def format_candles(raw):
-    return [
-        {
-            "timestamp": pd.to_datetime(candle["t"], unit="ms").strftime("%Y-%m-%d %H:%M"),
-            "open": candle["o"],
-            "high": candle["h"],
-            "low": candle["l"],
-            "close": candle["c"]
-        }
-        for candle in raw
-    ]
+### ✅ What You Need to Do Now:
 
-if submit and api_key and symbol:
-    with st.spinner("Fetching data from Polygon..."):
-        daily = format_candles(fetch_candles(symbol, "day", 5))
-        m15 = format_candles(fetch_candles(symbol, "minute", 20*15))[-20:]  # 20 most recent 15m
-        m1 = format_candles(fetch_candles(symbol, "minute", 30))
+#### **Step 1: Add the API Key into the Code**
 
-    st.subheader("🟢 Last 5 Daily Candles")
-    st.code(daily, language="json")
+You need a file (like `app.py`) that uses your Polygon API key (you already have one) and fetches candles like this:
 
-    st.subheader("🟡 Last 20 15-Minute Candles")
-    st.code(m15, language="json")
+```python
+import requests
 
-    st.subheader("🔴 Last 30 1-Minute Candles")
-    st.code(m1, language="json")
+POLYGON_API_KEY = "YOUR_API_KEY"
+symbol = "C:EURUSD"  # For example, EUR/USD Forex pair
+intervals = [
+    ("day", 5),      # Last 5 daily candles
+    ("15minute", 20),# Last 20 15m candles
+    ("minute", 30),  # Last 30 1m candles
+]
 
-    st.subheader("💬 Prompt to Use in ChatGPT")
-    prompt = f"""Based on the following market data:
+def get_candles(symbol, interval, limit):
+    url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/{interval}/2024-07-01/2024-07-20"
+    url += f"?adjusted=true&sort=desc&limit={limit}&apiKey={POLYGON_API_KEY}"
+    return requests.get(url).json()
 
-### Daily Candles:
-{daily}
+# Example:
+daily = get_candles(symbol, "day", 5)
+print(daily)
+```
 
-### 15-Minute Candles:
-{m15}
+#### **Step 2: Add this to your GitHub repo**
 
-### 1-Minute Candles:
-{m1}
+Upload this code as `app.py` in your GitHub repo (e.g. `yourusername/forex-trade-setup-app`).
 
-What is the highest-probability Forex trade setup based on trend, confluence, and momentum? Provide direction, entry, stop loss, target, and reasoning."""
-    st.text_area("Prompt to Copy", prompt, height=400)
+Then go back to Streamlit and:
 
-elif submit:
-    st.warning("Please enter both API Key and symbol.")
+* Set the repo to `yourusername/forex-trade-setup-app`
+* Branch: `main`
+* Main file path: `app.py`
+
+---
+
+### 💡 Shortcut:
+
+If you’d like, I can:
+
+* Package this into a complete `app.py` file
+* Give you a GitHub-ready zip to upload
+* Or walk you through copy-pasting it into your GitHub account
+
+Want me to prep the ready-to-go `app.py` for you now?
