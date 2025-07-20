@@ -1,22 +1,3 @@
-Thanks for the update — you're **almost there**, but here's why you're not seeing any candle data yet:
-
----
-
-### 🔧 Reason You See No Data:
-
-Your Streamlit app is showing the prompt template correctly, but **you haven’t connected your Polygon API** to fetch actual candlestick data.
-
----
-
-### ✅ What You Need to Do Now:
-
-#### **Step 1: Add the API Key into the Code**
-
-You need a file (like `app.py`) that uses your Polygon API key (you already have one) and fetches candles like this:
-
-```python
-import requests
-
 POLYGON_API_KEY = "YOUR_API_KEY"
 symbol = "C:EURUSD"  # For example, EUR/USD Forex pair
 intervals = [
